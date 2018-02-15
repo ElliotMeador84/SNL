@@ -4,8 +4,8 @@ library(tidyverse)
 library(RColorBrewer)
 library(igraph)
 library(jtools)
-
-snl_files <- paste0('~/Downloads/snldb/',list.files('~/Downloads/snldb/'))
+library(rgexf)  
+snl_files <- paste0('C:/R/SNL/New folder/',list.files('C:/R/SNL/New folder/'))
 
 
 
@@ -14,52 +14,41 @@ snl_dfs <- map(snl_files,function(x){
 }) #impost all files
 
 
-names(snl_dfs) <- gsub('\\.csv','',list.files('~/Downloads/snldb/')) #name the lists
+names(snl_dfs) <- gsub('\\.csv','',list.files('C:/R/SNL/New folder/')) #name the lists
 
 list2env(snl_dfs ,.GlobalEnv)# send all objects to environment
 
 
 
+# Create snl_info  --------------------------------------------------------
+
+# snl_info is a dataset that 
+# can be used for reference guide to the variables
 
 
 df_names <- map(snl_dfs,function(x){
   names(x)
-}) %>% flatten_chr() 
+}) %>% flatten_chr() # gets the names in vector
 
 longs <- map(snl_dfs,function(x){
   length(x)
-}) %>% flatten_chr()
+}) %>% flatten_chr()  # gets the length in vector
 
 
 df_name <- map2(longs,names(snl_dfs),function(x,y){
   y = rep(y,x)
-}) %>% flatten_chr()
+}) %>% flatten_chr() # reps the name the length
 
 snl_info <- data_frame(df_name,variables = df_names) 
 
-snl_info %>% 
-  group_by(value) %>% 
-  count() %>% 
-  arrange(desc(n))
 
 snl_info$nrow <- map2(snl_dfs,longs,function(x,y){
   rep(nrow(x),y)
-}) %>% flatten_dbl()
-
-snl_info %>% 
-  filter(df_name %in% c('casts',
-                        'actors',
-                        'seasons')) %>% 
-  group_by(variables) %>% 
-  count()
+}) %>% flatten_dbl() # reps the nrow the length
 
 
-map(snl_dfs,function(x){
-  glimpse(x)$aid
-})
 
-snl_info %>% 
-  filter(variables == 'tid')
+# Join datasets for graphing ----------------------------------------------
 
 
 
@@ -124,15 +113,26 @@ kappa <- lambda %>%
 
 # kappa graph 
 # on  x_n
-V(x_n)$label <- NA                        # vertex label
+V(x_n)$label <- NULL                       # vertex label
 V(x_n)$color <- adjustcolor(kappa$color,.9) # vertex color
 V(x_n)$size <- rescale(kappa$degree,2,25) #vertex size
+V(x_n)$gender <- kappa$gender
 x_n_fr <- layout.kamada.kawai(x_n)        # layout
 E(x_n)$color <- 'black'                  # edge color
 
-par(mar= c(0,0,0,0),bg = 'black')
+par(mar= c(0,0,0,0),bg = 'black') # plot paramaters
 
-plot(x_n,layout = x_n_fr)
+plot(x_n,layout = x_n_fr) # full igraph plot
+
+## save to Gephi style .csv
+
+x_full_plot <- to_source_target(x_n)
+write_csv(x_full_plot,'x_full_plot.csv',col_names = T)
+
+x_full_plot_labs <- to_source_target_labels(x_n)
+write_csv(x_full_plot_labs,'x_full_plot_labs.csv',col_names = T)
+
+
 
 ## n degree neighborhood of most influential members
 
@@ -149,17 +149,36 @@ males <- kappa_scale %>%
 #create sub graphs
 female_neighs <- ego(x_n, 1, females, mode = c("all"), #females
                      mindist = 0) %>% flatten_dbl(.)   
-male_neighs <- ego(x_n, 1, males, mode = c("all"), #males
-                   mindist = 0) %>% flatten_dbl(.)
-
-
 
 female_sub <- induced.subgraph(x_n,female_neighs)
+
+
+male_neighs <- ego(x_n, 1, males, mode = c("all"), #males
+                   mindist = 0) %>% flatten_dbl(.)
 male_sub <- induced.subgraph(x_n,male_neighs)
 
 
 plot(female_sub)
 plot(male_sub)
+
+
+
+
+to_source_target(male_sub)
+to_source_target_labels(male_sub)
+
+
+
+
+
+
+
+
+
+
+
+
+
 #####################################################
 ## Next steps determine the percents of males and  ##  ## females in one anothers 1st degree networks     ##
 #####################################################
@@ -181,7 +200,6 @@ ggplot(kappa_scale,aes(closeness,degree))+
   coord_equal()
 
 
-names(kappa_scale)
 ggplot(kappa_scale,aes(betweeness,degree))+
   geom_jitter(aes(color = gender,fill = gender),size = 2.5,alpha = .9)+
   scale_fill_manual(values = c('#227066','#FFF07A'))+
@@ -223,10 +241,6 @@ kappa_scale %>%
   facet_grid(.~key,scales = 'free_x')+
   coord_flip()+
   theme_apa()
-
-
-
-
 
 
 

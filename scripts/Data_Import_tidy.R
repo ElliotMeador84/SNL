@@ -158,14 +158,71 @@ male_neighs <- ego(x_n, 1, males, mode = c("all"), #males
 male_sub <- induced.subgraph(x_n,male_neighs)
 
 
-plot(female_sub)
-plot(male_sub)
+####
+
+
+# Feb 15, 2018 ------------------------------------------------------------
+
+
+library(tidyverse)
+library(igraph)
+
+source(paste0(getwd(),'/scripts/functions.R'))
+file.edit(paste0(getwd(),'/scripts/functions.R'))
+
+write_csv(to_source_target(x_n),'x_n.csv')
+write_csv(to_source_target_labels(x_n),'x_n_nodes.csv')
+
+
+# change the size by controlling for the number of episodes
+# still color by the seasons
+
+delta %>% 
+  group_by(aid) %>%
+  count(name)
+
+file.edit(paste0(getwd(),'/scripts/Data_Import_tidy.R'))
+
+
+
+head(delta)
+
+
+# save(kappa,file = paste0(getwd(),'/Rdata','/kappa.RData'))
+
+attributes(kappa)$info <- 'kappa is the primary data frame for organising the x_n graph characteristics; '
+
+kappa <- kappa %>% 
+  mutate(id = 1:nrow(.))
+
+attributes(kappa)$info
+
+kappa <- left_join(
+  kappa,
+  delta %>% 
+    select(aid,name) %>% 
+    group_by(aid) %>% 
+    count(name) %>% 
+    group_by(aid) %>% 
+    summarise(sketches = sum(n)) %>% 
+    arrange(desc(sketches))
+)
+V(x_n)$number.sketches <- kappa$sketches
+
+kappa <- left_join(
+  kappa,
+  delta %>% 
+    group_by(aid) %>% 
+    summarise(average.tenure = mean(sid))
+)
+
+V(x_n)$average.tenure <- kappa$average.tenure
+
+write_csv(to_source_target_labels(x_n),'x_n_nodes.csv')
 
 
 
 
-to_source_target(male_sub)
-to_source_target_labels(male_sub)
 
 
 
@@ -179,71 +236,24 @@ to_source_target_labels(male_sub)
 
 
 
-#####################################################
-## Next steps determine the percents of males and  ##  ## females in one anothers 1st degree networks     ##
-#####################################################
-
-# kappa ggplots
-# 
-xgen <- c('female','male')
-kappa_scale <- kappa %>% 
-  filter(gender %in% xgen) %>% 
-  mutate_if(is.numeric,~scale(.)) 
-
-
-ggplot(kappa_scale,aes(closeness,degree))+
-  geom_jitter(aes(color = gender,fill = gender),size = 2.5,alpha = .9)+
-  scale_fill_manual(values = c('#227066','#FFF07A'))+
-  scale_color_manual(values = c('#227066','#FFF07A'))+
-  ggtitle('Closeness by degree')+
-  theme_apa(legend.pos = 'bottom')+
-  coord_equal()
-
-
-ggplot(kappa_scale,aes(betweeness,degree))+
-  geom_jitter(aes(color = gender,fill = gender),size = 2.5,alpha = .9)+
-  scale_fill_manual(values = c('#227066','#FFF07A'))+
-  scale_color_manual(values = c('#227066','#FFF07A'))+
-  ggtitle('Betweenness by degree')+
-  theme_apa(legend.pos = 'bottom')+
-  coord_equal()
-
-ggplot(kappa_scale,aes(eigenvector,degree))+
-  geom_jitter(aes(color = gender,fill = gender),size = 2.5,alpha = .9)+
-  scale_fill_manual(values = c('#227066','#FFF07A'))+
-  scale_color_manual(values = c('#227066','#FFF07A'))+
-  ggtitle('Eigenvector by degree')+
-  theme_apa(legend.pos = 'bottom')+
-  coord_equal()
-
-#top females
-kappa_scale %>% 
-  filter(gender == 'female') %>% 
-  top_n(10,degree) %>% 
-  select(-gender,-color) %>% 
-  gather(key,value,-aid) %>% 
-  ggplot(.,aes(fct_reorder(aid,value,fun = mean),value)) +
-  geom_bar(stat = 'identity') +
-  facet_grid(.~key,scales = 'free_x')+
-  coord_flip()+
-  theme_apa()
 
 
 
-#top males
-kappa_scale %>% 
-  filter(gender == 'male') %>% 
-  top_n(10,degree) %>% 
-  select(-gender,-color) %>% 
-  gather(key,value,-aid) %>% 
-  ggplot(.,aes(fct_reorder(aid,value,fun = mean),value)) +
-  geom_bar(stat = 'identity') +
-  facet_grid(.~key,scales = 'free_x')+
-  coord_flip()+
-  theme_apa()
 
-save(kappa_scale,file = 'kappa_scale.RData')
-d?save
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

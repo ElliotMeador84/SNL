@@ -224,7 +224,8 @@ kappa_scale %>%
   coord_flip()+
   theme_apa()
 
-
+save(kappa_scale,file = 'kappa_scale.RData')
+d?save
 
 
 
